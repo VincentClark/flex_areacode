@@ -23,8 +23,7 @@ exports.handler = async function (context, event, callback) {
     response.appendHeader('Access-Control-Allow-Origin', '*');
     response.appendHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     response.appendHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-    try {
+    response.appendHeader('Content-Type', 'application/json'); try {
         const {
             testType = 'full-flow',
             destinationNumber = '+14155551234',
@@ -59,20 +58,20 @@ exports.handler = async function (context, event, callback) {
 
             default:
                 response.setStatusCode(400);
-                response.setBody({
+                response.setBody(JSON.stringify({
                     success: false,
                     error: 'Invalid testType. Options: full-flow, lookup, proximity, utils, inventory'
-                });
+                }));
                 return callback(null, response);
         }
 
         response.setStatusCode(200);
-        response.setBody({
+        response.setBody(JSON.stringify({
             success: true,
             testType: testType,
             timestamp: new Date().toISOString(),
             results: testResults
-        });
+        }));
 
         return callback(null, response);
 
@@ -80,11 +79,11 @@ exports.handler = async function (context, event, callback) {
         console.error('Error in test function:', error);
 
         response.setStatusCode(500);
-        response.setBody({
+        response.setBody(JSON.stringify({
             success: false,
             error: 'Test execution failed',
             details: error.message
-        });
+        }));
 
         return callback(null, response);
     }

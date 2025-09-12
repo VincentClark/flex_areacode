@@ -25,6 +25,7 @@ exports.handler = async function (context, event, callback) {
     response.appendHeader('Access-Control-Allow-Origin', '*');
     response.appendHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     response.appendHeader('Access-Control-Allow-Headers', 'Content-Type');
+    response.appendHeader('Content-Type', 'application/json');
 
     try {
         const {
@@ -37,20 +38,20 @@ exports.handler = async function (context, event, callback) {
         // Validate required parameters
         if (!destinationNumber) {
             response.setStatusCode(400);
-            response.setBody({
+            response.setBody(JSON.stringify({
                 success: false,
                 error: 'destinationNumber parameter is required'
-            });
+            }));
             return callback(null, response);
         }
 
         // Validate and parse the destination number
         if (!isValidPhoneNumber(destinationNumber, 'US')) {
             response.setStatusCode(400);
-            response.setBody({
+            response.setBody(JSON.stringify({
                 success: false,
                 error: 'Invalid phone number format'
-            });
+            }));
             return callback(null, response);
         }
 
@@ -67,10 +68,10 @@ exports.handler = async function (context, event, callback) {
 
         if (phoneNumbers.length === 0) {
             response.setStatusCode(404);
-            response.setBody({
+            response.setBody(JSON.stringify({
                 success: false,
                 error: 'No phone numbers found in inventory'
-            });
+            }));
             return callback(null, response);
         }
 
@@ -129,10 +130,10 @@ exports.handler = async function (context, event, callback) {
 
         if (scoredNumbers.length === 0) {
             response.setStatusCode(404);
-            response.setBody({
+            response.setBody(JSON.stringify({
                 success: false,
                 error: 'No suitable caller ID numbers found matching criteria'
-            });
+            }));
             return callback(null, response);
         }
 
@@ -143,7 +144,7 @@ exports.handler = async function (context, event, callback) {
         console.log(`Recommending ${recommendation.phoneNumber} (${recommendation.matchType})`);
 
         response.setStatusCode(200);
-        response.setBody({
+        response.setBody(JSON.stringify({
             success: true,
             destinationNumber: destinationNumber,
             targetAreaCode: targetAreaCode,
@@ -173,7 +174,7 @@ exports.handler = async function (context, event, callback) {
                     maxResults
                 }
             }
-        });
+        }));
 
         return callback(null, response);
 
@@ -181,11 +182,11 @@ exports.handler = async function (context, event, callback) {
         console.error('Error in caller ID assignment:', error);
 
         response.setStatusCode(500);
-        response.setBody({
+        response.setBody(JSON.stringify({
             success: false,
             error: 'Internal server error',
             details: error.message
-        });
+        }));
 
         return callback(null, response);
     }

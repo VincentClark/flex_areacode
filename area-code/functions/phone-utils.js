@@ -22,16 +22,17 @@ exports.handler = async function (context, event, callback) {
     response.appendHeader('Access-Control-Allow-Origin', '*');
     response.appendHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     response.appendHeader('Access-Control-Allow-Headers', 'Content-Type');
+  response.appendHeader('Content-Type', 'application/json');
 
     try {
         const { phoneNumber, action = 'validate', format = 'e164' } = event;
 
         if (!phoneNumber) {
             response.setStatusCode(400);
-            response.setBody({
+            response.setBody(JSON.stringify({
                 success: false,
                 error: 'phoneNumber parameter is required'
-            });
+            }));
             return callback(null, response);
         }
 
@@ -60,20 +61,20 @@ exports.handler = async function (context, event, callback) {
 
             default:
                 response.setStatusCode(400);
-                response.setBody({
+                response.setBody(JSON.stringify({
                     success: false,
                     error: 'Invalid action. Supported actions: validate, format, extract-area-code, normalize, analyze'
-                });
+                }));
                 return callback(null, response);
         }
 
         response.setStatusCode(200);
-        response.setBody({
+        response.setBody(JSON.stringify({
             success: true,
             action: action,
             input: phoneNumber,
             result: result
-        });
+        }));
 
         return callback(null, response);
 
@@ -81,11 +82,11 @@ exports.handler = async function (context, event, callback) {
         console.error('Error in phone number utilities:', error);
 
         response.setStatusCode(500);
-        response.setBody({
+        response.setBody(JSON.stringify({
             success: false,
             error: 'Internal server error',
             details: error.message
-        });
+        }));
 
         return callback(null, response);
     }

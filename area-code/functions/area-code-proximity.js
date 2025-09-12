@@ -19,29 +19,30 @@ exports.handler = async function (context, event, callback) {
     response.appendHeader('Access-Control-Allow-Origin', '*');
     response.appendHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     response.appendHeader('Access-Control-Allow-Headers', 'Content-Type');
+  response.appendHeader('Content-Type', 'application/json');
 
     try {
         const { sourceAreaCode, targetAreaCode } = event;
 
         if (!sourceAreaCode || !targetAreaCode) {
             response.setStatusCode(400);
-            response.setBody({
+            response.setBody(JSON.stringify({
                 success: false,
                 error: 'Both sourceAreaCode and targetAreaCode parameters are required'
-            });
+            }));
             return callback(null, response);
         }
 
         const proximityScore = calculateAdvancedProximity(sourceAreaCode, targetAreaCode);
 
         response.setStatusCode(200);
-        response.setBody({
+        response.setBody(JSON.stringify({
             success: true,
             sourceAreaCode,
             targetAreaCode,
             proximityScore,
             proximityLevel: getProximityLevel(proximityScore)
-        });
+        }));
 
         return callback(null, response);
 
@@ -49,11 +50,11 @@ exports.handler = async function (context, event, callback) {
         console.error('Error calculating area code proximity:', error);
 
         response.setStatusCode(500);
-        response.setBody({
+        response.setBody(JSON.stringify({
             success: false,
             error: 'Internal server error',
             details: error.message
-        });
+        }));
 
         return callback(null, response);
     }

@@ -21,6 +21,7 @@ exports.handler = async function (context, event, callback) {
     response.appendHeader('Access-Control-Allow-Origin', '*');
     response.appendHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     response.appendHeader('Access-Control-Allow-Headers', 'Content-Type');
+  response.appendHeader('Content-Type', 'application/json');
 
     try {
         const { targetAreaCode, limit = 10 } = event;
@@ -28,20 +29,20 @@ exports.handler = async function (context, event, callback) {
         // Validate input
         if (!targetAreaCode) {
             response.setStatusCode(400);
-            response.setBody({
+            response.setBody(JSON.stringify({
                 success: false,
                 error: 'targetAreaCode parameter is required'
-            });
+            }));
             return callback(null, response);
         }
 
         // Validate area code format (3 digits)
         if (!/^\d{3}$/.test(targetAreaCode)) {
             response.setStatusCode(400);
-            response.setBody({
+            response.setBody(JSON.stringify({
                 success: false,
                 error: 'targetAreaCode must be a 3-digit area code'
-            });
+            }));
             return callback(null, response);
         }
 
@@ -96,12 +97,12 @@ exports.handler = async function (context, event, callback) {
         console.log(`Returning ${scoredNumbers.length} matched numbers`);
 
         response.setStatusCode(200);
-        response.setBody({
+        response.setBody(JSON.stringify({
             success: true,
             targetAreaCode: targetAreaCode,
             results: scoredNumbers,
             totalFound: scoredNumbers.length
-        });
+        }));
 
         return callback(null, response);
 
@@ -109,11 +110,11 @@ exports.handler = async function (context, event, callback) {
         console.error('Error in area code lookup:', error);
 
         response.setStatusCode(500);
-        response.setBody({
+        response.setBody(JSON.stringify({
             success: false,
             error: 'Internal server error',
             details: error.message
-        });
+        }));
 
         return callback(null, response);
     }
