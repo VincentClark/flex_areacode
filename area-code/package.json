@@ -1,20 +1,32 @@
 {
   "name": "area-code",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
+  "description": "Twilio Serverless functions for area code matching and caller ID assignment",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "twilio-run",
-    "deploy": "twilio-run deploy"
+    "deploy": "twilio-run deploy",
+    "dev": "twilio-run --live"
   },
   "dependencies": {
     "twilio": "5.0.3",
-    "@twilio/runtime-handler": "2.0.3"
+    "@twilio/runtime-handler": "2.0.3",
+    "libphonenumber-js": "^1.10.44"
   },
   "devDependencies": {
     "twilio-run": "^4.0.3"
   },
   "engines": {
     "node": "18"
-  }
+  },
+  "keywords": [
+    "twilio",
+    "serverless",
+    "flex",
+    "area-code",
+    "caller-id"
+  ],
+  "author": "Vincent Clark",
+  "license": "MIT"
 }
