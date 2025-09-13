@@ -118,4 +118,4 @@ This project follows standard Git workflow practices. Please create feature bran
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the Ma

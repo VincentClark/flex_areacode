@@ -25,7 +25,7 @@ export default class AreacodePlugin extends FlexPlugin {
     // Add the area code matcher component to the agent desktop
     const options = { sortOrder: -1 };
     flex.AgentDesktopView.Panel1.Content.add(
-      <AreaCodeMatcher key="AreacodePlugin-matcher" />, 
+      <AreaCodeMatcher key="AreacodePlugin-matcher" />,
       options
     );
 
@@ -38,17 +38,17 @@ export default class AreacodePlugin extends FlexPlugin {
     // Hook into the dialer actions to automatically assign caller IDs
     flex.Actions.addListener('beforeStartOutboundCall', async (payload) => {
       console.log('Starting outbound call:', payload);
-      
+
       if (payload.destination) {
         try {
           const recommendation = await areaCodeDialerService.handleOutboundCall(
             payload.destination
           );
-          
+
           if (recommendation && recommendation.recommendedCallerId) {
             // Update the payload with the recommended caller ID
             payload.callerId = recommendation.recommendedCallerId;
-            
+
             console.log('Caller ID automatically assigned:', recommendation.recommendedCallerId);
           }
         } catch (error) {
@@ -60,10 +60,10 @@ export default class AreacodePlugin extends FlexPlugin {
     // Hook into task accepted events for outbound calls
     flex.Actions.addListener('afterAcceptTask', (payload) => {
       const task = payload.task;
-      
-      if (task.taskChannelUniqueName === 'voice' && 
-          task.attributes.direction === 'outbound') {
-        
+
+      if (task.taskChannelUniqueName === 'voice' &&
+        task.attributes.direction === 'outbound') {
+
         const destination = task.attributes.to || task.attributes.called;
         if (destination) {
           areaCodeDialerService.handleOutboundCall(destination, task.sid);

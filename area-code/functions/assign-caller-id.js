@@ -21,11 +21,19 @@ const { parsePhoneNumber, isValidPhoneNumber } = require('libphonenumber-js');
 exports.handler = async function (context, event, callback) {
     const response = new Twilio.Response();
 
-    // Set CORS headers
+    // Enhanced CORS headers for development
     response.appendHeader('Access-Control-Allow-Origin', '*');
     response.appendHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.appendHeader('Access-Control-Allow-Headers', 'Content-Type');
+    response.appendHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    response.appendHeader('Access-Control-Max-Age', '3600');
     response.appendHeader('Content-Type', 'application/json');
+
+    // Handle preflight OPTIONS request
+    if (event.httpMethod === 'OPTIONS') {
+        response.setStatusCode(200);
+        response.setBody('{}');
+        return callback(null, response);
+    }
 
     try {
         const {
