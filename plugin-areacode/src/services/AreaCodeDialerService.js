@@ -45,7 +45,7 @@ class AreaCodeDialerService {
     async getCallerIdRecommendation(destinationNumber) {
         try {
             console.log('🌐 Calling serverless function with:', destinationNumber);
-            
+
             const response = await fetch(`https://${this.serverlessDomain}/assign-caller-id`, {
                 method: 'POST',
                 headers: {
@@ -167,6 +167,17 @@ class AreaCodeDialerService {
 
             if (recommendation && recommendation.recommendedCallerId) {
                 console.log('✅ Applying caller ID:', recommendation.recommendedCallerId);
+                
+                // Store the recommended caller ID in plugin state
+                this.manager.store.dispatch({
+                    type: 'AREA_CODE_PLUGIN_SET_CALLER_ID',
+                    payload: {
+                        callerId: recommendation.recommendedCallerId,
+                        timestamp: Date.now(),
+                        applied: true
+                    }
+                });
+                
                 const success = this.applyCallerIdToCall(recommendation.recommendedCallerId, taskSid);
 
                 if (success) {

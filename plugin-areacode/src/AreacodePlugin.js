@@ -52,17 +52,27 @@ export default class AreacodePlugin extends FlexPlugin {
     // Hook into the dialer actions to automatically assign caller IDs
     flex.Actions.addListener('beforeStartOutboundCall', async (payload) => {
       console.log('🚀 beforeStartOutboundCall triggered:', payload);
-
+      
       if (payload.destination) {
         try {
           const recommendation = await areaCodeDialerService.handleOutboundCall(
             payload.destination
           );
-
+          
           if (recommendation && recommendation.recommendedCallerId) {
-            // Update the payload with the recommended caller ID
+            // CRITICAL: Directly modify the payload to change caller ID
             payload.callerId = recommendation.recommendedCallerId;
+            
+            // Also try to override any existing caller ID
+            if (payload.task) {
+              payload.task.attributes = {
+                ...payload.task.attributes,
+                outboundCallerId: recommendation.recommendedCallerId
+              };
+            }
+            
             console.log('✅ Caller ID automatically assigned via beforeStartOutboundCall:', recommendation.recommendedCallerId);
+            console.log('🔍 Modified payload:', payload);
           } else {
             console.log('❌ No recommendation received for:', payload.destination);
           }
@@ -72,9 +82,7 @@ export default class AreacodePlugin extends FlexPlugin {
       } else {
         console.log('❌ No destination in beforeStartOutboundCall payload');
       }
-    });
-
-    // Hook into dialer state changes more comprehensively
+    });    // Hook into dialer state changes more comprehensively
     flex.Actions.addListener('beforeStartCall', async (payload) => {
       console.log('🚀 beforeStartCall triggered:', payload);
 
@@ -173,11 +181,12 @@ export default class AreacodePlugin extends FlexPlugin {
       }
     });
 
-    // Add reducer to handle caller ID state
+    // Add custom reducer to handle caller ID state with enhanced logic
     manager.store.addReducer('areaCodePlugin', (state = {
       currentCallerId: null,
       lastRecommendation: null,
-      isEnabled: true
+      isEnabled: true,
+      pendingCallerId: null
     }, action) => {
       switch (action.type) {
         case 'FLEX_OUTBOUND_CALLER_ID_SET':
@@ -196,10 +205,40 @@ export default class AreacodePlugin extends FlexPlugin {
             ...state,
             lastRecommendation: action.payload
           };
+        case 'AREA_CODE_PLUGIN_SET_CALLER_ID':
+          // Store the recommended caller ID for use in call setup
+          return {
+            ...state,
+            pendingCallerId: action.payload.callerId,
+            lastRecommendation: action.payload
+          };
         default:
           return state;
       }
     });
+
+    // Add a more aggressive approach: intercept the actual Twilio call setup
+    const originalTwilioCall = manager.serviceConfiguration?.runtime?.call;
+    if (originalTwilioCall) {
+      manager.serviceConfiguration.runtime.call = function(params) {
+        console.log('🎯 Intercepting Twilio call with params:', params);
+        
+        // Check if we have a pending caller ID recommendation
+        const pluginState = manager.store.getState().areaCodePlugin;
+        if (pluginState?.pendingCallerId) {
+          console.log('🔄 Overriding caller ID from', params.From, 'to', pluginState.pendingCallerId);
+          params.From = pluginState.pendingCallerId;
+          
+          // Clear the pending caller ID
+          manager.store.dispatch({
+            type: 'AREA_CODE_PLUGIN_SET_CALLER_ID',
+            payload: { callerId: null }
+          });
+        }
+        
+        return originalTwilioCall.call(this, params);
+      };
+    }
 
     console.log('AreaCode Plugin initialized successfully');
   }
