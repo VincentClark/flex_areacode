@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Manager } from '@twilio/flex-ui';
-import areaCodeDialerService from '../services/AreaCodeDialerService';
+import areaCodeDialerService from '../../services/AreaCodeDialerService';
 
 const DialpadMonitor = () => {
   const [manager] = useState(() => Manager.getInstance());
