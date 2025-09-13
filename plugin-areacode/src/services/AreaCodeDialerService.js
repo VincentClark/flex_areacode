@@ -42,23 +42,28 @@ class AreaCodeDialerService {
     }
 
     // Fetch caller ID recommendation from serverless function
-    async getCallerIdRecommendation(areaCode) {
+    async getCallerIdRecommendation(destinationNumber) {
         try {
+            console.log('🌐 Calling serverless function with:', destinationNumber);
+            
             const response = await fetch(`https://${this.serverlessDomain}/assign-caller-id`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    destinationAreaCode: areaCode
+                    destinationNumber: destinationNumber
                 })
             });
+
+            console.log('📡 Serverless response status:', response.status);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
+            console.log('📋 Serverless response data:', data);
 
             if (data.success) {
                 this.currentRecommendation = data;
@@ -67,7 +72,7 @@ class AreaCodeDialerService {
                 throw new Error(data.error || 'Failed to get caller ID recommendation');
             }
         } catch (error) {
-            console.error('Error fetching caller ID recommendation:', error);
+            console.error('❌ Error fetching caller ID recommendation:', error);
             return null;
         }
     }
@@ -81,7 +86,7 @@ class AreaCodeDialerService {
             const phoneState = this.manager.store.getState().flex?.phone;
             if (phoneState) {
                 console.log('Current phone state:', phoneState);
-                
+
                 // Dispatch action to update caller ID in phone state
                 this.manager.store.dispatch({
                     type: 'PHONE_SET_CALLER_ID',
@@ -141,23 +146,27 @@ class AreaCodeDialerService {
 
     // Main function to handle outbound call setup
     async handleOutboundCall(destinationNumber, taskSid = null) {
+        console.log('🎯 handleOutboundCall called with:', destinationNumber, taskSid);
+
         if (!this.isEnabled) {
-            console.log('Area code matching is disabled');
+            console.log('❌ Area code matching is disabled');
             return null;
         }
 
         const areaCode = this.extractAreaCode(destinationNumber);
         if (!areaCode) {
-            console.log('Could not extract area code from:', destinationNumber);
+            console.log('❌ Could not extract area code from:', destinationNumber);
             return null;
         }
 
-        console.log('Processing outbound call for area code:', areaCode);
+        console.log('🔍 Processing outbound call for area code:', areaCode);
 
         try {
-            const recommendation = await this.getCallerIdRecommendation(areaCode);
+            const recommendation = await this.getCallerIdRecommendation(destinationNumber);
+            console.log('📋 Received recommendation:', recommendation);
 
             if (recommendation && recommendation.recommendedCallerId) {
+                console.log('✅ Applying caller ID:', recommendation.recommendedCallerId);
                 const success = this.applyCallerIdToCall(recommendation.recommendedCallerId, taskSid);
 
                 if (success) {
@@ -171,10 +180,14 @@ class AreaCodeDialerService {
                     });
 
                     return recommendation;
+                } else {
+                    console.log('❌ Failed to apply caller ID');
                 }
+            } else {
+                console.log('❌ No recommended caller ID in response');
             }
         } catch (error) {
-            console.error('Error in handleOutboundCall:', error);
+            console.error('❌ Error in handleOutboundCall:', error);
         }
 
         return null;

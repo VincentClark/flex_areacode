@@ -51,64 +51,115 @@ export default class AreacodePlugin extends FlexPlugin {
 
     // Hook into the dialer actions to automatically assign caller IDs
     flex.Actions.addListener('beforeStartOutboundCall', async (payload) => {
-      console.log('beforeStartOutboundCall triggered:', payload);
-      
+      console.log('🚀 beforeStartOutboundCall triggered:', payload);
+
       if (payload.destination) {
         try {
           const recommendation = await areaCodeDialerService.handleOutboundCall(
             payload.destination
           );
-          
+
           if (recommendation && recommendation.recommendedCallerId) {
             // Update the payload with the recommended caller ID
             payload.callerId = recommendation.recommendedCallerId;
-            
-            console.log('Caller ID automatically assigned:', recommendation.recommendedCallerId);
+            console.log('✅ Caller ID automatically assigned via beforeStartOutboundCall:', recommendation.recommendedCallerId);
+          } else {
+            console.log('❌ No recommendation received for:', payload.destination);
           }
         } catch (error) {
-          console.error('Error in beforeStartOutboundCall:', error);
+          console.error('❌ Error in beforeStartOutboundCall:', error);
         }
+      } else {
+        console.log('❌ No destination in beforeStartOutboundCall payload');
       }
     });
 
     // Hook into dialer state changes more comprehensively
     flex.Actions.addListener('beforeStartCall', async (payload) => {
-      console.log('beforeStartCall triggered:', payload);
-      
+      console.log('🚀 beforeStartCall triggered:', payload);
+
       if (payload.destination) {
         try {
           const recommendation = await areaCodeDialerService.handleOutboundCall(
             payload.destination
           );
-          
+
           if (recommendation && recommendation.recommendedCallerId) {
             payload.callerId = recommendation.recommendedCallerId;
-            console.log('Caller ID set via beforeStartCall:', recommendation.recommendedCallerId);
+            console.log('✅ Caller ID set via beforeStartCall:', recommendation.recommendedCallerId);
           }
         } catch (error) {
-          console.error('Error in beforeStartCall:', error);
+          console.error('❌ Error in beforeStartCall:', error);
+        }
+      }
+    });
+
+    // Try to catch call setup events
+    flex.Actions.addListener('beforeSetupCall', async (payload) => {
+      console.log('🚀 beforeSetupCall triggered:', payload);
+
+      if (payload.destination || payload.to) {
+        const destination = payload.destination || payload.to;
+        try {
+          const recommendation = await areaCodeDialerService.handleOutboundCall(destination);
+
+          if (recommendation && recommendation.recommendedCallerId) {
+            payload.callerId = recommendation.recommendedCallerId;
+            console.log('✅ Caller ID set via beforeSetupCall:', recommendation.recommendedCallerId);
+          }
+        } catch (error) {
+          console.error('❌ Error in beforeSetupCall:', error);
         }
       }
     });
 
     // Hook into dialpad number changes
     flex.Actions.addListener('beforeSetActivity', (payload) => {
-      console.log('Activity change:', payload);
+      console.log('🔔 Activity change:', payload);
     });
 
     // Monitor dialpad input changes
     manager.store.subscribe(() => {
       const state = manager.store.getState();
       const phoneState = state.flex?.phone;
-      
+
       if (phoneState && phoneState.call && phoneState.call.to) {
         const destination = phoneState.call.to;
-        console.log('Phone state changed - destination:', destination);
-        
+        console.log('📞 Phone state changed - destination:', destination);
+
         // Trigger caller ID lookup for the new destination
         areaCodeDialerService.handleOutboundCall(destination);
       }
-    });    // Hook into task accepted events for outbound calls
+    });
+
+    // Intercept ALL actions to see what happens during call setup
+    const originalDispatch = manager.store.dispatch;
+    manager.store.dispatch = (action) => {
+      // Log all actions that might be related to calling
+      if (action.type && (
+        action.type.includes('CALL') ||
+        action.type.includes('PHONE') ||
+        action.type.includes('DIAL') ||
+        action.type.includes('OUTBOUND')
+      )) {
+        console.log('🎬 FLEX ACTION INTERCEPTED:', action.type, action.payload);
+
+        // Try to extract destination from various action types
+        const destination = action.payload?.destination ||
+          action.payload?.to ||
+          action.payload?.number ||
+          action.payload?.phoneNumber;
+
+        if (destination && destination.length >= 10) {
+          console.log('🎯 Found destination in action:', destination);
+          setTimeout(() => {
+            areaCodeDialerService.handleOutboundCall(destination);
+          }, 100);
+        }
+      }
+
+      return originalDispatch(action);
+    };    // Hook into task accepted events for outbound calls
     flex.Actions.addListener('afterAcceptTask', (payload) => {
       const task = payload.task;
 

@@ -60,7 +60,7 @@ const AreaCodeMatcher = () => {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    destinationAreaCode: areaCode
+                    destinationNumber: `+1${areaCode}5551234` // Create a sample number with the area code
                 })
             });
 
