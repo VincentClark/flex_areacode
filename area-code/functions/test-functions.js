@@ -5,10 +5,11 @@
  * from a single endpoint. Useful for development and debugging.
  * 
  * Parameters:
- * - testType: Type of test to run (full-flow, lookup, proximity, utils)
+ * - testType: Type of test to run (full-flow, lookup, proximity, utils, inventory, area-code-match)
  * - destinationNumber: Test destination number
  * - sourceAreaCode: Test source area code
  * - targetAreaCode: Test target area code
+ * - areaCode: Area code to find best matching phone number for
  * 
  * Returns:
  * - Test results and function outputs
@@ -28,7 +29,8 @@ exports.handler = async function (context, event, callback) {
             testType = 'full-flow',
             destinationNumber = '+14155551234',
             sourceAreaCode = '415',
-            targetAreaCode = '510'
+            targetAreaCode = '510',
+            areaCode = '415'
         } = event;
 
         console.log(`Running test type: ${testType}`);
@@ -56,11 +58,15 @@ exports.handler = async function (context, event, callback) {
                 testResults = await runInventoryTest(context);
                 break;
 
+            case 'area-code-match':
+                testResults = await runAreaCodeMatchTest(context, areaCode);
+                break;
+
             default:
                 response.setStatusCode(400);
                 response.setBody(JSON.stringify({
                     success: false,
-                    error: 'Invalid testType. Options: full-flow, lookup, proximity, utils, inventory'
+                    error: 'Invalid testType. Options: full-flow, lookup, proximity, utils, inventory, area-code-match'
                 }));
                 return callback(null, response);
         }
@@ -311,4 +317,178 @@ async function runInventoryTest(context) {
             error: error.message
         };
     }
+}
+
+/**
+ * Test area code matching - find best phone number for a given area code
+ */
+async function runAreaCodeMatchTest(context, targetAreaCode) {
+    try {
+        const client = context.getTwilioClient();
+        const phoneNumbers = await client.incomingPhoneNumbers.list();
+
+        if (phoneNumbers.length === 0) {
+            return {
+                error: 'No phone numbers found in inventory'
+            };
+        }
+
+        // Validate area code format
+        if (!/^\d{3}$/.test(targetAreaCode)) {
+            return {
+                error: 'Area code must be a 3-digit number'
+            };
+        }
+
+        console.log(`Finding best match for area code: ${targetAreaCode}`);
+
+        // Enhanced area code data with geographic information
+        const areaCodeData = {
+            '415': { state: 'CA', region: 'West', city: 'San Francisco', timezone: 'America/Los_Angeles' },
+            '510': { state: 'CA', region: 'West', city: 'Oakland', timezone: 'America/Los_Angeles' },
+            '650': { state: 'CA', region: 'West', city: 'San Mateo', timezone: 'America/Los_Angeles' },
+            '925': { state: 'CA', region: 'West', city: 'Concord', timezone: 'America/Los_Angeles' },
+            '626': { state: 'CA', region: 'West', city: 'Pasadena', timezone: 'America/Los_Angeles' },
+            '805': { state: 'CA', region: 'West', city: 'Santa Barbara', timezone: 'America/Los_Angeles' },
+            '714': { state: 'CA', region: 'West', city: 'Anaheim', timezone: 'America/Los_Angeles' },
+            '659': { state: 'CA', region: 'West', city: 'Alabama', timezone: 'America/Los_Angeles' },
+            '734': { state: 'MI', region: 'Midwest', city: 'Ann Arbor', timezone: 'America/Detroit' },
+            '212': { state: 'NY', region: 'Northeast', city: 'New York', timezone: 'America/New_York' },
+            '646': { state: 'NY', region: 'Northeast', city: 'New York', timezone: 'America/New_York' },
+            '718': { state: 'NY', region: 'Northeast', city: 'New York', timezone: 'America/New_York' },
+            '917': { state: 'NY', region: 'Northeast', city: 'New York', timezone: 'America/New_York' },
+            '214': { state: 'TX', region: 'South', city: 'Dallas', timezone: 'America/Chicago' },
+            '469': { state: 'TX', region: 'South', city: 'Dallas', timezone: 'America/Chicago' },
+            '972': { state: 'TX', region: 'South', city: 'Dallas', timezone: 'America/Chicago' },
+            '713': { state: 'TX', region: 'South', city: 'Houston', timezone: 'America/Chicago' }
+        };
+
+        const targetRegion = areaCodeData[targetAreaCode] || {
+            state: 'Unknown',
+            region: 'Unknown',
+            city: 'Unknown',
+            timezone: 'Unknown'
+        };
+
+        // Score and rank phone numbers
+        const scoredNumbers = phoneNumbers
+            .map(number => {
+                try {
+                    const phoneNumber = parsePhoneNumber(number.phoneNumber, 'US');
+
+                    if (!phoneNumber || !phoneNumber.nationalNumber) {
+                        return null;
+                    }
+
+                    const areaCode = phoneNumber.nationalNumber.substring(0, 3);
+                    const candidateRegion = areaCodeData[areaCode] || {
+                        state: 'Unknown',
+                        region: 'Unknown',
+                        city: 'Unknown',
+                        timezone: 'Unknown'
+                    };
+
+                    // Calculate comprehensive score
+                    let score = 0;
+                    let matchType = '';
+
+                    if (targetAreaCode === areaCode) {
+                        score = 0;
+                        matchType = 'Exact Area Code Match';
+                    } else if (targetRegion.state === candidateRegion.state) {
+                        score = 10;
+                        matchType = 'Same State';
+                    } else if (targetRegion.region === candidateRegion.region) {
+                        score = 20;
+                        matchType = 'Same Region';
+                    } else {
+                        score = 50;
+                        matchType = 'Different Region';
+                    }
+
+                    // Add numeric distance as tie-breaker
+                    const numericDistance = Math.abs(parseInt(targetAreaCode) - parseInt(areaCode));
+                    score += numericDistance / 1000;
+
+                    return {
+                        phoneNumber: number.phoneNumber,
+                        friendlyName: number.friendlyName,
+                        areaCode: areaCode,
+                        score: score,
+                        matchType: matchType,
+                        region: candidateRegion,
+                        numericDistance: numericDistance,
+                        capabilities: {
+                            voice: number.capabilities.voice,
+                            sms: number.capabilities.sms,
+                            mms: number.capabilities.mms
+                        }
+                    };
+                } catch (error) {
+                    console.error(`Error parsing phone number ${number.phoneNumber}:`, error);
+                    return null;
+                }
+            })
+            .filter(item => item !== null)
+            .sort((a, b) => a.score - b.score); // Lower score is better
+
+        const bestMatch = scoredNumbers[0];
+        const alternatives = scoredNumbers.slice(1, 6); // Top 5 alternatives
+
+        return {
+            targetAreaCode: targetAreaCode,
+            targetRegion: targetRegion,
+            totalInventory: phoneNumbers.length,
+            recommendation: bestMatch ? {
+                phoneNumber: bestMatch.phoneNumber,
+                friendlyName: bestMatch.friendlyName,
+                areaCode: bestMatch.areaCode,
+                matchType: bestMatch.matchType,
+                score: bestMatch.score,
+                region: bestMatch.region,
+                numericDistance: bestMatch.numericDistance,
+                capabilities: bestMatch.capabilities,
+                reasoning: getBestMatchReasoning(bestMatch, targetAreaCode, targetRegion)
+            } : null,
+            alternatives: alternatives.map(alt => ({
+                phoneNumber: alt.phoneNumber,
+                friendlyName: alt.friendlyName,
+                areaCode: alt.areaCode,
+                matchType: alt.matchType,
+                score: alt.score,
+                region: alt.region,
+                numericDistance: alt.numericDistance
+            })),
+            summary: {
+                exactMatches: scoredNumbers.filter(n => n.score === 0).length,
+                sameStateMatches: scoredNumbers.filter(n => n.matchType === 'Same State').length,
+                sameRegionMatches: scoredNumbers.filter(n => n.matchType === 'Same Region').length,
+                differentRegionMatches: scoredNumbers.filter(n => n.matchType === 'Different Region').length
+            }
+        };
+
+    } catch (error) {
+        return {
+            error: error.message
+        };
+    }
+}
+
+/**
+ * Generate reasoning for why a number was selected as the best match
+ */
+function getBestMatchReasoning(bestMatch, targetAreaCode, targetRegion) {
+    if (bestMatch.score === 0) {
+        return `Perfect match! This number has the exact same area code (${targetAreaCode}) as your target.`;
+    }
+
+    if (bestMatch.matchType === 'Same State') {
+        return `Good match! While not the exact area code, this number is in the same state (${targetRegion.state}) which provides local presence.`;
+    }
+
+    if (bestMatch.matchType === 'Same Region') {
+        return `Decent match! This number is in the same region (${targetRegion.region}) as your target area code.`;
+    }
+
+    return `Best available option. No numbers found in the same state or region, but this has the closest numeric area code (${bestMatch.numericDistance} difference).`;
 }
