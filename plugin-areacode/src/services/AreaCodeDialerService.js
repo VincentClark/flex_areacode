@@ -75,14 +75,29 @@ class AreaCodeDialerService {
     // Apply caller ID to the outbound call
     applyCallerIdToCall(callerId, taskSid = null) {
         try {
-            // Method 1: Update the global outbound caller ID configuration
+            console.log('Applying caller ID:', callerId);
+
+            // Method 1: Try to update phone state directly
+            const phoneState = this.manager.store.getState().flex?.phone;
+            if (phoneState) {
+                console.log('Current phone state:', phoneState);
+                
+                // Dispatch action to update caller ID in phone state
+                this.manager.store.dispatch({
+                    type: 'PHONE_SET_CALLER_ID',
+                    payload: callerId
+                });
+            }
+
+            // Method 2: Update the global outbound caller ID configuration
             if (this.manager.configuration) {
                 this.manager.updateConfig({
                     outboundCallerId: callerId
                 });
+                console.log('Updated manager configuration with caller ID');
             }
 
-            // Method 2: Dispatch action to store
+            // Method 3: Dispatch action to store for tracking
             this.manager.store.dispatch({
                 type: 'FLEX_OUTBOUND_CALLER_ID_SET',
                 payload: {
@@ -92,7 +107,19 @@ class AreaCodeDialerService {
                 }
             });
 
-            // Method 3: If we have a specific task, update its attributes
+            // Method 4: Try to set it in the dialer state
+            try {
+                this.manager.store.dispatch({
+                    type: 'SET_OUTBOUND_CALLER_ID',
+                    payload: {
+                        outboundCallerId: callerId
+                    }
+                });
+            } catch (error) {
+                console.log('Could not dispatch SET_OUTBOUND_CALLER_ID:', error.message);
+            }
+
+            // Method 5: If we have a specific task, update its attributes
             if (taskSid) {
                 const task = this.manager.store.getState().flex.worker.tasks.get(taskSid);
                 if (task) {
