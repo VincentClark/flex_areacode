@@ -51,16 +51,16 @@ const CallerIdSelector = () => {
                 '626': ['714', '805'], // LA area -> Orange County, Central CA
                 '714': ['626', '805'], // Orange County -> LA area, Central CA  
                 '805': ['626', '714'], // Central CA -> LA area, Orange County
-                
+
                 // North Carolina
                 '704': ['734'], // NC -> Michigan (no other close matches)
-                
+
                 // Michigan  
                 '734': ['704'], // Michigan -> NC (no other close matches)
-                
+
                 // Alabama
                 '659': ['704', '734'], // Alabama -> NC, Michigan (southeastern preference)
-                
+
                 // Common CA area codes that might be dialed
                 '213': ['626', '714'], // Downtown LA -> LA area, Orange County
                 '310': ['626', '714'], // West LA -> LA area, Orange County
@@ -68,18 +68,18 @@ const CallerIdSelector = () => {
                 '818': ['626', '805'], // San Fernando Valley -> LA area, Central CA
                 '949': ['714', '626'], // South Orange County -> Orange County, LA area
                 '562': ['626', '714'], // Long Beach -> LA area, Orange County
-                
+
                 // Michigan area codes  
                 '313': ['734'], // Detroit -> Michigan
                 '248': ['734'], // Oakland County -> Michigan
                 '586': ['734'], // Macomb County -> Michigan
-                
+
                 // North Carolina area codes
                 '919': ['704'], // Raleigh -> Charlotte area
                 '910': ['704'], // Fayetteville -> Charlotte area
                 '828': ['704'], // Asheville -> Charlotte area
                 '252': ['704'], // Eastern NC -> Charlotte area
-                
+
                 // Alabama area codes
                 '205': ['659'], // Birmingham -> Alabama
                 '251': ['659'], // Mobile -> Alabama
@@ -94,9 +94,9 @@ const CallerIdSelector = () => {
                     const proximateMatch = phoneNumbers.find(num => num.areaCode === proximateCode);
                     if (proximateMatch) {
                         console.log(`🎯 Geographic proximity match: ${targetAreaCode} -> ${proximateCode}`);
-                        return { 
-                            number: proximateMatch, 
-                            reason: `Geographic match: ${targetAreaCode} is close to ${proximateCode} (${proximateMatch.region})` 
+                        return {
+                            number: proximateMatch,
+                            reason: `Geographic match: ${targetAreaCode} is close to ${proximateCode} (${proximateMatch.region})`
                         };
                     }
                 }
@@ -105,9 +105,9 @@ const CallerIdSelector = () => {
             // Fallback: Default to 626 (LA area) as it's most versatile
             const fallback = phoneNumbers.find(num => num.areaCode === '626');
             console.log('🔄 Using fallback caller ID for area code:', targetAreaCode);
-            return { 
-                number: fallback, 
-                reason: `No close match for ${targetAreaCode}, using default LA number` 
+            return {
+                number: fallback,
+                reason: `No close match for ${targetAreaCode}, using default LA number`
             };
         };
 
@@ -126,11 +126,11 @@ const CallerIdSelector = () => {
         // Listen for dialpad input changes
         const handleDialpadChange = (inputValue) => {
             setDialedNumber(inputValue);
-            
+
             // Extract area code from the input (first 3 digits after country code)
             const cleanNumber = inputValue.replace(/\D/g, ''); // Remove non-digits
             let areaCode = '';
-            
+
             if (cleanNumber.length >= 3) {
                 if (cleanNumber.startsWith('1') && cleanNumber.length >= 4) {
                     // US number with country code
@@ -139,21 +139,21 @@ const CallerIdSelector = () => {
                     // Assume it's a US number without country code
                     areaCode = cleanNumber.substring(0, 3);
                 }
-                
+
                 if (areaCode.length === 3) {
                     console.log('🎯 Detected area code:', areaCode, 'from input:', inputValue);
-                    
+
                     const match = findClosestAreaCode(areaCode);
                     if (match && match.number) {
                         setSelectedCallerId(match.number.phoneNumber);
                         setAutoSelectedReason(match.reason);
-                        
+
                         // Save to localStorage
                         localStorage.setItem('selected_caller_id', match.number.phoneNumber);
-                        
+
                         console.log('🚀 Auto-selected caller ID:', match.number.friendlyName);
                         console.log('📍 Reason:', match.reason);
-                        
+
                         // Update Redux store
                         if (manager && manager.store) {
                             manager.store.dispatch({
@@ -161,17 +161,17 @@ const CallerIdSelector = () => {
                                 payload: { callerId: match.number.phoneNumber }
                             });
                         }
-                        
+
                         // Dispatch custom event
                         window.dispatchEvent(new CustomEvent('callerIdChanged', {
-                            detail: { 
+                            detail: {
                                 callerId: match.number.phoneNumber,
                                 autoSelected: true,
                                 reason: match.reason,
                                 targetAreaCode: areaCode
                             }
                         }));
-                        
+
                         // Update Flex configuration
                         if (manager?.configuration?.voice) {
                             manager.configuration.voice.defaultCallerId = match.number.phoneNumber;
@@ -185,32 +185,32 @@ const CallerIdSelector = () => {
         const observeDialpadInput = () => {
             // Look for dialpad input field
             const checkForDialpad = () => {
-                const dialpadInput = document.querySelector('input[data-testid="dialpad-input"]') || 
-                                   document.querySelector('input[placeholder*="phone"]') ||
-                                   document.querySelector('input[type="tel"]') ||
-                                   document.querySelector('.Twilio-OutboundDialerPanel input');
-                
+                const dialpadInput = document.querySelector('input[data-testid="dialpad-input"]') ||
+                    document.querySelector('input[placeholder*="phone"]') ||
+                    document.querySelector('input[type="tel"]') ||
+                    document.querySelector('.Twilio-OutboundDialerPanel input');
+
                 if (dialpadInput) {
                     console.log('📱 Found dialpad input, monitoring for area code matching...');
-                    
+
                     // Add event listener for input changes
                     dialpadInput.addEventListener('input', (e) => {
                         handleDialpadChange(e.target.value);
                     });
-                    
+
                     dialpadInput.addEventListener('keyup', (e) => {
                         handleDialpadChange(e.target.value);
                     });
-                    
+
                     dialpadInput.addEventListener('paste', (e) => {
                         setTimeout(() => handleDialpadChange(e.target.value), 100);
                     });
-                    
+
                     return true;
                 }
                 return false;
             };
-            
+
             // Try to find dialpad immediately
             if (!checkForDialpad()) {
                 // If not found, observe DOM changes
@@ -219,12 +219,12 @@ const CallerIdSelector = () => {
                         observer.disconnect();
                     }
                 });
-                
+
                 observer.observe(document.body, {
                     childList: true,
                     subtree: true
                 });
-                
+
                 // Cleanup observer after 30 seconds
                 setTimeout(() => observer.disconnect(), 30000);
             }
