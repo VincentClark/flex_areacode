@@ -167,7 +167,7 @@ class AreaCodeDialerService {
 
             if (recommendation && recommendation.recommendedCallerId) {
                 console.log('✅ Applying caller ID:', recommendation.recommendedCallerId);
-                
+
                 // Store the recommended caller ID in plugin state
                 this.manager.store.dispatch({
                     type: 'AREA_CODE_PLUGIN_SET_CALLER_ID',
@@ -177,7 +177,7 @@ class AreaCodeDialerService {
                         applied: true
                     }
                 });
-                
+
                 const success = this.applyCallerIdToCall(recommendation.recommendedCallerId, taskSid);
 
                 if (success) {

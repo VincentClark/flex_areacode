@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Dialpad Caller ID Selector - Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📞 Enhanced Dialpad Caller ID Selector</h1>
+        
+        <div class="status success">
+            ✅ <strong>CallerIdSelector Component Enhanced!</strong>
+        </div>
+        
+        <div class="status info">
+            🔍 <strong>Debug Features Added:</strong>
+            <ul>
+                <li>Prominent gradient styling with "DEBUG MODE" badge</li>
+                <li>5 color-coded phone numbers with area code indicators</li>
+                <li>Real-time selection feedback</li>
+                <li>localStorage persistence</li>
+                <li>Redux state management</li>
+                <li>Event notifications for other components</li>
+            </ul>
+        </div>
+        
+        <div class="status info">
+            📞 <strong>Available Numbers:</strong>
+            <ul>
+                <li>🔵 (626) 602-9805 - Default CA</li>
+                <li>🟢 (734) 203-7317 - Michigan</li>
+                <li>🟡 (714) 735-0613 - Orange County CA</li>
+                <li>🔴 (704) 703-9096 - North Carolina</li>
+                <li>🟣 (805) 301-6297 - Central CA</li>
+            </ul>
+        </div>
+        
+        <div class="status warning">
+            📋 <strong>Testing Instructions:</strong>
+            <ol>
+                <li>Open your Twilio Flex environment</li>
+                <li>Navigate to the dialpad (outbound dialer)</li>
+                <li>Look for the prominent purple gradient selector at the top</li>
+                <li>Select a caller ID from the dropdown</li>
+                <li>Watch for the green "ACTIVE" confirmation</li>
+                <li>Check browser console for debugging logs</li>
+                <li>Try dialing a number to test the override</li>
+            </ol>
+        </div>
+        
+        <h3>🔧 Component Placement</h3>
+        <pre>
+// In AreacodePlugin.js:
+flex.OutboundDialerPanel.Content.add(
+  &lt;CallerIdSelector key="AreacodePlugin-caller-id-selector" /&gt;,
+  { sortOrder: -1 }  // Top placement for visibility
+);
+
+flex.OutboundDialerPanel.Content.add(
+  &lt;DebugStatus key="AreacodePlugin-debug-status" /&gt;,
+  { sortOrder: 0 }   // Status indicator below selector
+);
+        </pre>
+        
+        <h3>🎯 Key Features</h3>
+        <pre>
+✅ Manual caller ID selection overrides automatic matching
+✅ Visual feedback with color-coded status indicators  
+✅ Persistent selection saved to localStorage
+✅ Real-time debugging with console logs
+✅ Redux integration for state management
+✅ Custom events for component communication
+✅ Prominent dialpad placement for easy access
+        </pre>
+        
+        <div class="status success">
+            🚀 <strong>Ready for Testing!</strong><br>
+            Your enhanced dialpad caller ID selector is now ready for debugging. The component will appear prominently at the top of your outbound dialpad with a purple gradient background and "DEBUG MODE" indicator.
+        </div>
+    </div>
+</body>
+</html>
